@@ -17,4 +17,16 @@ public final class AnimalUdderHealthPatches {
             losesHealth = false;
         }
     }
+
+    @Patch(
+        className = "zombie.characters.animals.datas.AnimalData",
+        methodName = "checkOld",
+        strictMatch = true
+    )
+    public static final class GeriatricHealthLoss {
+        @Patch.OnEnter(skipOn = true)
+        public static boolean enter() {
+            return true;
+        }
+    }
 }

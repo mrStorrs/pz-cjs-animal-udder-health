@@ -10,14 +10,11 @@ public final class AnimalUdderHealthPatchTest {
     }
 
     public static void main(String[] args) throws ReflectiveOperationException {
-        Patch patch = AnimalUdderHealthPatches.FullUdderHealthLoss.class.getAnnotation(Patch.class);
-        check(patch != null, "full-udder patch annotation is required");
-        check(
-            "zombie.characters.animals.datas.AnimalData".equals(patch.className()),
-            "patch must target AnimalData"
+        assertTarget(
+            AnimalUdderHealthPatches.FullUdderHealthLoss.class,
+            "reduceHealthDueToMilk"
         );
-        check("reduceHealthDueToMilk".equals(patch.methodName()), "patch must target milk health loss");
-        check(patch.strictMatch(), "patch must use strict overload matching");
+        assertTarget(AnimalUdderHealthPatches.GeriatricHealthLoss.class, "checkOld");
 
         Method exit = AnimalUdderHealthPatches.FullUdderHealthLoss.class.getDeclaredMethod(
             "exit",
@@ -26,12 +23,35 @@ public final class AnimalUdderHealthPatchTest {
         Patch.Return result = exit.getParameters()[0].getAnnotation(Patch.Return.class);
         check(result != null && !result.readOnly(), "patch must replace the vanilla result");
 
+        Method enter = AnimalUdderHealthPatches.GeriatricHealthLoss.class.getDeclaredMethod("enter");
+        Patch.OnEnter onEnter = enter.getAnnotation(Patch.OnEnter.class);
+        check(onEnter != null && onEnter.skipOn(), "geriatric patch must skip vanilla health loss");
+
         List<Class<?>> patches = PatchEngine.collectPatches(
             "com.cjstorrs.animaludderhealth",
             AnimalUdderHealthPatchTest.class.getClassLoader()
         );
-        check(patches.equals(List.of(AnimalUdderHealthPatches.FullUdderHealthLoss.class)), "patch discovery changed");
+        check(
+            patches.equals(
+                List.of(
+                    AnimalUdderHealthPatches.FullUdderHealthLoss.class,
+                    AnimalUdderHealthPatches.GeriatricHealthLoss.class
+                )
+            ),
+            "patch discovery changed"
+        );
         System.out.println("AnimalUdderHealthPatchTest: PASS");
+    }
+
+    private static void assertTarget(Class<?> patchClass, String methodName) {
+        Patch patch = patchClass.getAnnotation(Patch.class);
+        check(patch != null, patchClass.getName() + " patch annotation is required");
+        check(
+            "zombie.characters.animals.datas.AnimalData".equals(patch.className()),
+            patchClass.getName() + " must target AnimalData"
+        );
+        check(methodName.equals(patch.methodName()), patchClass.getName() + " target changed");
+        check(patch.strictMatch(), patchClass.getName() + " must use strict overload matching");
     }
 
     private static void check(boolean condition, String message) {
