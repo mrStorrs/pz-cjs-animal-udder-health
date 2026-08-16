@@ -1,0 +1,11 @@
+name=CJS Animal Udder Health
+id=cjsAnimalUdderHealth
+description=Prevents full udders from damaging animals in Project Zomboid B42.20.
+author=CJ Storrs
+modversion=1.0.0
+versionMin=42.20.0
+versionMax=42.20.99
+require=\ZombieBuddy
+javaJarFile=media/java/CJSAnimalUdderHealth.jar
+javaPkgName=com.cjstorrs.animaludderhealth
+ZBVersionMin=2.3.2
