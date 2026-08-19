@@ -1,8 +1,8 @@
 name=CJS Animal Passive Health
 id=cjsAnimalUdderHealth
-description=Prevents passive health loss for domestic animals in Project Zomboid B42.20.
+description=Prevents old-age and overfull-udder health loss for domestic animals in Project Zomboid B42.20 while preserving starvation and dehydration damage.
 author=CJ Storrs
-modversion=1.1.0
+modversion=1.1.1
 versionMin=42.20.0
 versionMax=42.20.99
 require=\ZombieBuddy

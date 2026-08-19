@@ -1,6 +1,7 @@
 package com.cjstorrs.animaludderhealth;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import me.zed_0xff.zombie_buddy.Patch;
 import me.zed_0xff.zombie_buddy.PatchEngine;
@@ -10,6 +11,7 @@ public final class AnimalUdderHealthPatchTest {
     }
 
     public static void main(String[] args) throws ReflectiveOperationException {
+        verifyRuntimeVisibility();
         verifyRecoveryBehavior();
         assertTarget(AnimalUdderHealthPatches.PassiveHealthLoss.class, "updateHealth");
         assertTarget(
@@ -63,9 +65,17 @@ public final class AnimalUdderHealthPatchTest {
         PassiveHealthRuntime.apply(new FakeData(recoverable));
         checkClose(0.6F, recoverable.health, "recoverable animal must heal at the vanilla rate");
 
-        FakeAnimal hungry = new FakeAnimal(false, null, 0.81F, 0.2F, 0.5F);
-        PassiveHealthRuntime.apply(new FakeData(hungry));
-        checkClose(0.5F, hungry.health, "hungry animal must not heal");
+        FakeAnimal starving = new FakeAnimal(false, null, 0.81F, 0.2F, 0.5F);
+        PassiveHealthRuntime.apply(new FakeData(starving));
+        checkClose(0.4F, starving.health, "starving animal must lose health at the vanilla rate");
+
+        FakeAnimal dehydrated = new FakeAnimal(false, null, 0.2F, 0.81F, 0.5F);
+        PassiveHealthRuntime.apply(new FakeData(dehydrated));
+        checkClose(0.4F, dehydrated.health, "dehydrated animal must lose health at the vanilla rate");
+
+        FakeAnimal starvingInDirtyHutch = new FakeAnimal(false, new FakeHutch(40.1F), 0.81F, 0.2F, 0.5F);
+        PassiveHealthRuntime.apply(new FakeData(starvingInDirtyHutch));
+        checkClose(0.4F, starvingInDirtyHutch.health, "dirty hutch must not prevent starvation damage");
 
         FakeAnimal dirtyHutch = new FakeAnimal(false, new FakeHutch(40.1F), 0.2F, 0.2F, 0.5F);
         PassiveHealthRuntime.apply(new FakeData(dirtyHutch));
@@ -78,6 +88,12 @@ public final class AnimalUdderHealthPatchTest {
         FakeAnimal nearlyHealthy = new FakeAnimal(false, null, 0.2F, 0.2F, 0.95F);
         PassiveHealthRuntime.apply(new FakeData(nearlyHealthy));
         checkClose(1.0F, nearlyHealthy.health, "recovery must not exceed full health");
+    }
+
+    private static void verifyRuntimeVisibility() throws ReflectiveOperationException {
+        check(Modifier.isPublic(PassiveHealthRuntime.class.getModifiers()), "runtime class must be public for injected game code");
+        Method apply = PassiveHealthRuntime.class.getMethod("apply", Object.class);
+        check(Modifier.isPublic(apply.getModifiers()), "runtime apply method must be public for injected game code");
     }
 
     private static void assertTarget(Class<?> patchClass, String methodName) {

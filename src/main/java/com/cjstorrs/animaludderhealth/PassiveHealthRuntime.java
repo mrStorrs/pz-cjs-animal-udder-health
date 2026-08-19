@@ -3,7 +3,7 @@ package com.cjstorrs.animaludderhealth;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-final class PassiveHealthRuntime {
+public final class PassiveHealthRuntime {
     private static final float MAX_HEALTH = 1.0F;
     private static final float MAX_HUNGER_OR_THIRST_FOR_RECOVERY = 0.8F;
     private static final float MAX_HUTCH_DIRT_FOR_RECOVERY = 40.0F;
@@ -37,12 +37,19 @@ final class PassiveHealthRuntime {
     private PassiveHealthRuntime() {
     }
 
-    static void apply(Object data) {
+    public static void apply(Object data) {
         try {
             DataAccess dataAccess = DATA_ACCESS.get(data.getClass());
             Object animal = dataAccess.parent.get(data);
             AnimalAccess animalAccess = ANIMAL_ACCESS.get(animal.getClass());
             if ((Boolean) animalAccess.isWild.invoke(animal)) {
+                return;
+            }
+
+            float health = number(animalAccess.getHealth.invoke(animal));
+            if (number(animalAccess.getHunger.invoke(animal)) > MAX_HUNGER_OR_THIRST_FOR_RECOVERY
+                || number(animalAccess.getThirst.invoke(animal)) > MAX_HUNGER_OR_THIRST_FOR_RECOVERY) {
+                animalAccess.setHealth.invoke(animal, health - number(dataAccess.getHealthLoss.invoke(data, RECOVERY_DIVISOR)));
                 return;
             }
 
@@ -52,12 +59,6 @@ final class PassiveHealthRuntime {
                 return;
             }
 
-            if (number(animalAccess.getHunger.invoke(animal)) > MAX_HUNGER_OR_THIRST_FOR_RECOVERY
-                || number(animalAccess.getThirst.invoke(animal)) > MAX_HUNGER_OR_THIRST_FOR_RECOVERY) {
-                return;
-            }
-
-            float health = number(animalAccess.getHealth.invoke(animal));
             if (health < MAX_HEALTH) {
                 float recovery = number(dataAccess.getHealthLoss.invoke(data, RECOVERY_DIVISOR));
                 animalAccess.setHealth.invoke(animal, Math.min(MAX_HEALTH, health + recovery));
