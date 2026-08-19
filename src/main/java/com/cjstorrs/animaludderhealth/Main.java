@@ -5,6 +5,6 @@ public final class Main {
     }
 
     public static void main(String[] args) {
-        System.out.println("[cjsAnimalUdderHealth] Full udders no longer damage animals.");
+        System.out.println("[cjsAnimalUdderHealth] Passive animal health loss is disabled; direct damage remains active.");
     }
 }

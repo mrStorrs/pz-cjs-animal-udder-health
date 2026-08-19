@@ -8,6 +8,19 @@ public final class AnimalUdderHealthPatches {
 
     @Patch(
         className = "zombie.characters.animals.datas.AnimalData",
+        methodName = "updateHealth",
+        strictMatch = true
+    )
+    public static final class PassiveHealthLoss {
+        @Patch.OnEnter(skipOn = true)
+        public static boolean enter(@Patch.This Object data) {
+            PassiveHealthRuntime.apply(data);
+            return true;
+        }
+    }
+
+    @Patch(
+        className = "zombie.characters.animals.datas.AnimalData",
         methodName = "reduceHealthDueToMilk",
         strictMatch = true
     )

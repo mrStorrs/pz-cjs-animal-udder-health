@@ -1,8 +1,8 @@
-name=CJS Animal Udder Health
+name=CJS Animal Passive Health
 id=cjsAnimalUdderHealth
-description=Prevents full udders from damaging animals in Project Zomboid B42.20.
+description=Prevents passive health loss for domestic animals in Project Zomboid B42.20.
 author=CJ Storrs
-modversion=1.0.0
+modversion=1.1.0
 versionMin=42.20.0
 versionMax=42.20.99
 require=\ZombieBuddy

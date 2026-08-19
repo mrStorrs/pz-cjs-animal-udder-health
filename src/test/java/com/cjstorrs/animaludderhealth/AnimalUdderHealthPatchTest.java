@@ -10,6 +10,8 @@ public final class AnimalUdderHealthPatchTest {
     }
 
     public static void main(String[] args) throws ReflectiveOperationException {
+        verifyRecoveryBehavior();
+        assertTarget(AnimalUdderHealthPatches.PassiveHealthLoss.class, "updateHealth");
         assertTarget(
             AnimalUdderHealthPatches.FullUdderHealthLoss.class,
             "reduceHealthDueToMilk"
@@ -27,6 +29,18 @@ public final class AnimalUdderHealthPatchTest {
         Patch.OnEnter onEnter = enter.getAnnotation(Patch.OnEnter.class);
         check(onEnter != null && onEnter.skipOn(), "geriatric patch must skip vanilla health loss");
 
+        Method passiveHealthEnter = AnimalUdderHealthPatches.PassiveHealthLoss.class.getDeclaredMethod(
+            "enter",
+            Object.class
+        );
+        Patch.OnEnter passiveHealthAdvice = passiveHealthEnter.getAnnotation(Patch.OnEnter.class);
+        check(
+            passiveHealthAdvice != null && passiveHealthAdvice.skipOn(),
+            "passive-health patch must replace the vanilla health update"
+        );
+        Patch.This receiver = passiveHealthEnter.getParameters()[0].getAnnotation(Patch.This.class);
+        check(receiver != null, "passive-health patch must receive AnimalData");
+
         List<Class<?>> patches = PatchEngine.collectPatches(
             "com.cjstorrs.animaludderhealth",
             AnimalUdderHealthPatchTest.class.getClassLoader()
@@ -35,12 +49,35 @@ public final class AnimalUdderHealthPatchTest {
             patches.equals(
                 List.of(
                     AnimalUdderHealthPatches.FullUdderHealthLoss.class,
-                    AnimalUdderHealthPatches.GeriatricHealthLoss.class
+                    AnimalUdderHealthPatches.GeriatricHealthLoss.class,
+                    AnimalUdderHealthPatches.PassiveHealthLoss.class
                 )
             ),
             "patch discovery changed"
         );
         System.out.println("AnimalUdderHealthPatchTest: PASS");
+    }
+
+    private static void verifyRecoveryBehavior() {
+        FakeAnimal recoverable = new FakeAnimal(false, null, 0.2F, 0.2F, 0.5F);
+        PassiveHealthRuntime.apply(new FakeData(recoverable));
+        checkClose(0.6F, recoverable.health, "recoverable animal must heal at the vanilla rate");
+
+        FakeAnimal hungry = new FakeAnimal(false, null, 0.81F, 0.2F, 0.5F);
+        PassiveHealthRuntime.apply(new FakeData(hungry));
+        checkClose(0.5F, hungry.health, "hungry animal must not heal");
+
+        FakeAnimal dirtyHutch = new FakeAnimal(false, new FakeHutch(40.1F), 0.2F, 0.2F, 0.5F);
+        PassiveHealthRuntime.apply(new FakeData(dirtyHutch));
+        checkClose(0.5F, dirtyHutch.health, "dirty hutch must still prevent recovery");
+
+        FakeAnimal wild = new FakeAnimal(true, null, 0.2F, 0.2F, 0.5F);
+        PassiveHealthRuntime.apply(new FakeData(wild));
+        checkClose(0.5F, wild.health, "wild animals must remain outside the patch scope");
+
+        FakeAnimal nearlyHealthy = new FakeAnimal(false, null, 0.2F, 0.2F, 0.95F);
+        PassiveHealthRuntime.apply(new FakeData(nearlyHealthy));
+        checkClose(1.0F, nearlyHealthy.health, "recovery must not exceed full health");
     }
 
     private static void assertTarget(Class<?> patchClass, String methodName) {
@@ -57,6 +94,70 @@ public final class AnimalUdderHealthPatchTest {
     private static void check(boolean condition, String message) {
         if (!condition) {
             throw new AssertionError(message);
+        }
+    }
+
+    private static void checkClose(float expected, float actual, String message) {
+        check(Math.abs(expected - actual) < 0.0001F, message + ": expected " + expected + ", got " + actual);
+    }
+
+    public static final class FakeData {
+        public final FakeAnimal parent;
+
+        public FakeData(FakeAnimal parent) {
+            this.parent = parent;
+        }
+
+        public float getHealthLoss(Float ignored) {
+            return 0.1F;
+        }
+    }
+
+    public static final class FakeAnimal {
+        public final boolean wild;
+        public final FakeHutch hutch;
+        public final float hunger;
+        public final float thirst;
+        public float health;
+
+        public FakeAnimal(boolean wild, FakeHutch hutch, float hunger, float thirst, float health) {
+            this.wild = wild;
+            this.hutch = hutch;
+            this.hunger = hunger;
+            this.thirst = thirst;
+            this.health = health;
+        }
+
+        public boolean isWild() {
+            return this.wild;
+        }
+
+        public float getHunger() {
+            return this.hunger;
+        }
+
+        public float getThirst() {
+            return this.thirst;
+        }
+
+        public float getHealth() {
+            return this.health;
+        }
+
+        public void setHealth(float health) {
+            this.health = health;
+        }
+    }
+
+    public static final class FakeHutch {
+        public final float dirt;
+
+        public FakeHutch(float dirt) {
+            this.dirt = dirt;
+        }
+
+        public float getHutchDirt() {
+            return this.dirt;
         }
     }
 }
